@@ -1,1 +1,1 @@
-{"name":"말글 — AI 회의록","short_name":"말글","description":"화자를 구분하고 핵심과 할 일을 정리하는 AI 회의록","start_url":"./","display":"standalone","background_color":"#f2efe8","theme_color":"#f2efe8","icons":[{"src":"favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
+{"name":"말글 — 실시간 번역 회의록","short_name":"말글","description":"1분마다 화자를 구분해 원문과 번역을 함께 기록하는 AI 회의록","start_url":"./","display":"standalone","background_color":"#f2efe8","theme_color":"#f2efe8","icons":[{"src":"favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
