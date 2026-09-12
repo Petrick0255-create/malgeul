@@ -1,1 +1,1 @@
-window.MALGEUL_CONFIG = { apiBase: 'https://api.openai.com/v1' };
+window.MALGEUL_CONFIG = { apiBase: 'https://generativelanguage.googleapis.com' };
