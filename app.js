@@ -1,166 +1,26 @@
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-const elements = {
-  transcript: document.querySelector('#transcript'),
-  interim: document.querySelector('#interim'),
-  record: document.querySelector('#recordButton'),
-  hint: document.querySelector('#recordHint'),
-  status: document.querySelector('#status'),
-  language: document.querySelector('#language'),
-  charCount: document.querySelector('#charCount'),
-  wordCount: document.querySelector('#wordCount'),
-  timer: document.querySelector('#timer'),
-  clear: document.querySelector('#clearButton'),
-  copy: document.querySelector('#copyButton'),
-  download: document.querySelector('#downloadButton'),
-  toast: document.querySelector('#toast'),
-  modal: document.querySelector('#permissionModal'),
-  closeModal: document.querySelector('#closeModal'),
-};
-
-let recognition = null;
-let isListening = false;
-let shouldRestart = false;
-let elapsed = 0;
-let timerId = null;
-let saveId = null;
-
-const replacements = {
-  ' 마침표': '.', ' 쉼표': ',', ' 물음표': '?', ' 느낌표': '!',
-  ' 줄바꿈': '\n', ' 새 문단': '\n\n',
-};
-
-function normalizeSpeech(text) {
-  let result = ` ${text.trim()}`;
-  Object.entries(replacements).forEach(([spoken, mark]) => {
-    result = result.replaceAll(spoken, mark);
-  });
-  return result.trim();
-}
-
-function updateStats() {
-  const value = elements.transcript.value;
-  elements.charCount.textContent = value.length.toLocaleString('ko-KR');
-  elements.wordCount.textContent = value.trim() ? value.trim().split(/\s+/).length.toLocaleString('ko-KR') : '0';
-  clearTimeout(saveId);
-  saveId = setTimeout(() => localStorage.setItem('malgeul-draft', value), 250);
-}
-
-function updateTimer() {
-  const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
-  const seconds = String(elapsed % 60).padStart(2, '0');
-  elements.timer.textContent = `${minutes}:${seconds}`;
-}
-
-function setListening(active) {
-  isListening = active;
-  elements.record.classList.toggle('active', active);
-  elements.record.setAttribute('aria-label', active ? '받아쓰기 멈춤' : '받아쓰기 시작');
-  elements.status.classList.toggle('listening', active);
-  elements.status.lastElementChild.textContent = active ? '듣고 있어요' : '준비됐어요';
-  elements.hint.textContent = active ? '말씀하세요. 문장으로 옮기고 있어요' : '버튼을 눌러 받아쓰기를 시작하세요';
-  if (active && !timerId) timerId = setInterval(() => { elapsed += 1; updateTimer(); }, 1000);
-  if (!active && timerId) { clearInterval(timerId); timerId = null; }
-}
-
-function showToast(message) {
-  elements.toast.textContent = message;
-  elements.toast.classList.add('show');
-  setTimeout(() => elements.toast.classList.remove('show'), 1800);
-}
-
-function appendText(text) {
-  const current = elements.transcript.value;
-  const separator = current && !/\s$/.test(current) ? ' ' : '';
-  elements.transcript.value = current + separator + normalizeSpeech(text);
-  elements.transcript.scrollTop = elements.transcript.scrollHeight;
-  updateStats();
-}
-
-function createRecognition() {
-  if (!SpeechRecognition) return null;
-  const instance = new SpeechRecognition();
-  instance.continuous = true;
-  instance.interimResults = true;
-  instance.lang = elements.language.value;
-
-  instance.onresult = (event) => {
-    let interimText = '';
-    for (let i = event.resultIndex; i < event.results.length; i += 1) {
-      const text = event.results[i][0].transcript;
-      if (event.results[i].isFinal) appendText(text);
-      else interimText += text;
-    }
-    elements.interim.textContent = interimText;
-  };
-  instance.onerror = (event) => {
-    if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-      shouldRestart = false;
-      elements.modal.hidden = false;
-    } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
-      showToast('음성을 인식하지 못했어요. 다시 시도해 주세요.');
-    }
-  };
-  instance.onend = () => {
-    elements.interim.textContent = '';
-    if (shouldRestart) {
-      try { instance.start(); } catch (_) { setListening(false); }
-    } else setListening(false);
-  };
-  return instance;
-}
-
-function toggleRecording() {
-  if (!SpeechRecognition) {
-    showToast('Chrome 또는 Edge 브라우저에서 이용해 주세요.');
-    return;
-  }
-  if (isListening) {
-    shouldRestart = false;
-    recognition.stop();
-    setListening(false);
-    return;
-  }
-  recognition = createRecognition();
-  shouldRestart = true;
-  try { recognition.start(); setListening(true); }
-  catch (_) { showToast('잠시 후 다시 시도해 주세요.'); }
-}
-
-elements.record.addEventListener('click', toggleRecording);
-elements.language.addEventListener('change', () => {
-  localStorage.setItem('malgeul-language', elements.language.value);
-  if (isListening) { shouldRestart = false; recognition.stop(); setListening(false); showToast('언어를 바꿨어요. 다시 시작해 주세요.'); }
-});
-elements.transcript.addEventListener('input', updateStats);
-elements.clear.addEventListener('click', () => {
-  if (!elements.transcript.value || window.confirm('받아쓴 내용을 모두 지울까요?')) {
-    elements.transcript.value = ''; elements.interim.textContent = ''; elapsed = 0; updateTimer(); updateStats();
-  }
-});
-elements.copy.addEventListener('click', async () => {
-  if (!elements.transcript.value) return showToast('복사할 내용이 없어요.');
-  try { await navigator.clipboard.writeText(elements.transcript.value); showToast('클립보드에 복사했어요.'); }
-  catch (_) { elements.transcript.select(); document.execCommand('copy'); showToast('클립보드에 복사했어요.'); }
-});
-elements.download.addEventListener('click', () => {
-  if (!elements.transcript.value) return showToast('저장할 내용이 없어요.');
-  const blob = new Blob([elements.transcript.value], { type: 'text/plain;charset=utf-8' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `말글_${new Date().toISOString().slice(0, 10)}.txt`;
-  link.click();
-  URL.revokeObjectURL(link.href);
-  showToast('텍스트 파일로 저장했어요.');
-});
-elements.closeModal.addEventListener('click', () => { elements.modal.hidden = true; setListening(false); });
-document.addEventListener('keydown', (event) => {
-  if (event.code === 'Space' && event.target === document.body) { event.preventDefault(); toggleRecording(); }
-});
-window.addEventListener('beforeunload', () => { shouldRestart = false; if (recognition) recognition.abort(); });
-
-elements.transcript.value = localStorage.getItem('malgeul-draft') || '';
-elements.language.value = localStorage.getItem('malgeul-language') || 'ko-KR';
-updateStats();
-
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+const API_BASE=(window.MALGEUL_CONFIG?.apiBase||'').replace(/\/$/,'');
+const $=s=>document.querySelector(s);
+const el={setup:$('#setupPanel'),processing:$('#processingPanel'),result:$('#resultPanel'),title:$('#meetingTitle'),date:$('#meetingDate'),language:$('#language'),consent:$('#consentCheck'),record:$('#recordButton'),captureTitle:$('#captureTitle'),captureHint:$('#captureHint'),recordMeta:$('#recordMeta'),timer:$('#timer'),visualizer:$('#visualizer'),file:$('#audioFile'),apiStatus:$('#apiStatus'),apiKey:$('#apiKeyInput'),toggleKey:$('#toggleKeyButton'),saveKey:$('#saveKeyButton'),removeKey:$('#removeKeyButton'),toast:$('#toast'),processingTitle:$('#processingTitle'),progress:$('#progressBar'),resultTitle:$('#resultTitle'),resultMeta:$('#resultMeta'),overview:$('#summaryOverview'),keyPoints:$('#keyPoints'),decisions:$('#decisions'),actions:$('#actionItems'),speakerInputs:$('#speakerInputs'),transcript:$('#transcriptList'),copy:$('#copyButton'),download:$('#downloadButton'),newMeeting:$('#newMeetingButton')};
+let recorder,stream,chunks=[],elapsed=0,timerId,progressId,currentData,speakerNames={},apiKey=localStorage.getItem('malgeul-openai-key')||'';
+el.date.value=new Date().toISOString().slice(0,10);
+function toast(m){el.toast.textContent=m;el.toast.classList.add('show');setTimeout(()=>el.toast.classList.remove('show'),2200)}
+function clock(s=0){return`${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`}
+function esc(v=''){const d=document.createElement('div');d.textContent=String(v);return d.innerHTML}
+function setRecording(on){el.record.classList.toggle('active',on);el.recordMeta.hidden=!on;el.captureTitle.textContent=on?'회의를 듣고 있어요':'마이크를 켜고 회의를 시작하세요';el.captureHint.textContent=on?'끝나면 가운데 버튼을 다시 눌러 주세요.':'회의가 끝나면 화자별 대화와 핵심 내용을 자동으로 정리해 드려요.';el.visualizer.innerHTML=on?Array.from({length:28},(_,i)=>`<i style="animation-delay:${i%7*-.09}s"></i>`).join(''):''}
+function checkService(){el.apiKey.value=apiKey;el.removeKey.hidden=!apiKey;status(Boolean(apiKey),apiKey?'AI 서비스 준비됨':'API 키 입력 필요')}
+function status(ok,label){el.apiStatus.classList.toggle('offline',!ok);el.apiStatus.querySelector('b').textContent=label}
+function ready(){if(!apiKey){toast('먼저 OpenAI API 키를 저장해 주세요.');el.apiKey.focus();return false}if(!el.consent.checked){toast('참석자 녹음 동의를 확인해 주세요.');return false}if(!API_BASE){toast('AI 서비스 주소가 아직 설정되지 않았어요.');return false}return true}
+async function toggle(){if(recorder?.state==='recording'){recorder.stop();return}if(!ready())return;if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)return toast('Chrome 또는 Edge 최신 버전에서 이용해 주세요.');try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});chunks=[];elapsed=0;el.timer.textContent='00:00';const mime=MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':'';recorder=new MediaRecorder(stream,{mimeType:mime,audioBitsPerSecond:32000});recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.onstop=()=>{const blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});stream.getTracks().forEach(t=>t.stop());clearInterval(timerId);setRecording(false);processAudio(blob,`meeting-${Date.now()}.webm`)};recorder.start(1000);setRecording(true);timerId=setInterval(()=>{elapsed++;el.timer.textContent=clock(elapsed)},1000)}catch(e){toast(e.name==='NotAllowedError'?'마이크 권한을 허용해 주세요.':'마이크를 시작하지 못했어요.')}}
+async function processAudio(blob,name){if(blob.size>25*1024*1024)return toast('파일은 25MB 이하만 사용할 수 있어요.');el.setup.hidden=true;el.result.hidden=true;el.processing.hidden=false;fakeProgress();try{const transcription=await transcribe(blob,name),minutes=await summarize(transcription,el.title.value.trim()||'새로운 회의');currentData={transcription,minutes};speakerNames={};transcription.segments.forEach(s=>speakerNames[s.speaker]||=`화자 ${s.speaker}`);clearInterval(progressId);el.progress.style.width='100%';render()}catch(e){clearInterval(progressId);el.processing.hidden=true;el.setup.hidden=false;toast(e.message||'처리 중 오류가 발생했어요.')}}
+async function transcribe(blob,name){const form=new FormData();form.append('file',blob,name);form.append('model','gpt-4o-transcribe-diarize');form.append('response_format','diarized_json');form.append('chunking_strategy','auto');form.append('language',el.language.value);const r=await fetch(`${API_BASE}/audio/transcriptions`,{method:'POST',headers:{Authorization:`Bearer ${apiKey}`},body:form}),d=await r.json();if(!r.ok)throw new Error(apiError(d,'화자 분리 전사에 실패했습니다.'));d.segments=(d.segments||[]).map(s=>({speaker:String(s.speaker||'A'),start:Number(s.start||0),end:Number(s.end||0),text:String(s.text||'').trim()})).filter(s=>s.text);if(!d.segments.length)throw new Error('음성에서 대화를 찾지 못했어요.');return d}
+async function summarize(transcription,title){const transcript=transcription.segments.map(s=>`[${clock(s.start)}] 화자 ${s.speaker}: ${s.text}`).join('\n'),schema={type:'object',additionalProperties:false,properties:{overview:{type:'string'},key_points:{type:'array',items:{type:'string'}},decisions:{type:'array',items:{type:'string'}},action_items:{type:'array',items:{type:'object',additionalProperties:false,properties:{task:{type:'string'},assignee:{type:'string'},due:{type:'string'}},required:['task','assignee','due']}},},required:['overview','key_points','decisions','action_items']};const r=await fetch(`${API_BASE}/responses`,{method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},body:JSON.stringify({model:'gpt-5-mini',store:false,instructions:'당신은 정확하고 간결한 한국어 회의록 작성자다. 전사에 없는 내용을 추측하지 않는다. 명시된 결정과 할 일만 추출하고 담당자나 기한이 불명확하면 빈 문자열로 둔다.',input:`회의 제목: ${title}\n\n다음 화자 분리 전사를 회의록으로 정리하세요.\n\n${transcript}`,text:{format:{type:'json_schema',name:'meeting_minutes',strict:true,schema}}})}),d=await r.json();if(!r.ok)throw new Error(apiError(d,'회의 요약에 실패했습니다.'));return JSON.parse(responseText(d))}
+function apiError(data,fallback){return String(data?.error?.message||fallback).slice(0,240)}
+function responseText(data){for(const item of data.output||[])for(const content of item.content||[])if(content.type==='output_text'&&content.text)return content.text;throw new Error('회의록 응답을 읽지 못했어요.')}
+function fakeProgress(){let p=7;el.progress.style.width=`${p}%`;const labels=['음성을 안전하게 보내고 있어요','목소리를 구분하고 있어요','핵심 내용과 할 일을 정리해요'];progressId=setInterval(()=>{p=Math.min(90,p+Math.max(1,(92-p)*.055));el.progress.style.width=`${p}%`;const step=p<35?0:p<72?1:2;el.processingTitle.textContent=labels[step];document.querySelectorAll('.process-steps span').forEach((x,i)=>x.classList.toggle('active',i<=step))},700)}
+function list(target,items,empty){target.innerHTML=(items?.length?items:[empty]).map(x=>`<li>${esc(x)}</li>`).join('')}
+function render(){const{minutes:m,transcription:t}=currentData;el.resultTitle.textContent=el.title.value.trim()||'회의록';el.resultMeta.textContent=`${el.date.value} · 화자 ${Object.keys(speakerNames).length}명${t.duration?` · ${clock(t.duration)}`:''}`;el.overview.textContent=m.overview||'회의 요약이 없습니다.';list(el.keyPoints,m.key_points,'추출된 핵심 논의가 없습니다.');list(el.decisions,m.decisions,'명확하게 결정된 사항이 없습니다.');el.actions.innerHTML=(m.action_items?.length?m.action_items:[{task:'추출된 할 일이 없습니다.',assignee:'-',due:'-'}]).map(x=>`<div class="action-row"><strong>${esc(x.task)}</strong><span>담당 ${esc(x.assignee||'-')}</span><span>기한 ${esc(x.due||'-')}</span></div>`).join('');renderSpeakers();renderTranscript();setTimeout(()=>{el.processing.hidden=true;el.result.hidden=false;el.result.scrollIntoView({behavior:'smooth'})},450)}
+function renderSpeakers(){el.speakerInputs.innerHTML=Object.entries(speakerNames).map(([id,name],i)=>`<label class="speaker-name"><i>${esc(id)}</i><input data-speaker="${esc(id)}" value="${esc(name)}" aria-label="화자 ${i+1} 이름"></label>`).join('');el.speakerInputs.querySelectorAll('input').forEach(input=>input.addEventListener('input',()=>{speakerNames[input.dataset.speaker]=input.value||`화자 ${input.dataset.speaker}`;renderTranscript()}))}
+function renderTranscript(){const order=Object.keys(speakerNames);el.transcript.innerHTML=currentData.transcription.segments.map(s=>`<article class="utterance" data-speaker-index="${order.indexOf(s.speaker)%3}"><div class="avatar">${esc(s.speaker)}</div><div><div class="utterance-head"><strong>${esc(speakerNames[s.speaker]||s.speaker)}</strong><time>${clock(s.start)}</time></div><p>${esc(s.text)}</p></div></article>`).join('')}
+function markdown(){if(!currentData)return'';const m=currentData.minutes,lines=[`# ${el.title.value.trim()||'회의록'}`,'',`- 날짜: ${el.date.value}`,`- 참석 화자: ${Object.values(speakerNames).join(', ')}`,'','## 회의 요약','',m.overview||'','','## 핵심 논의',...(m.key_points||[]).map(x=>`- ${x}`),'','## 결정 사항',...(m.decisions||[]).map(x=>`- ${x}`),'','## 할 일',...(m.action_items||[]).map(x=>`- [ ] ${x.task} — 담당: ${x.assignee||'-'}, 기한: ${x.due||'-'}`),'','## 전체 대화',''];currentData.transcription.segments.forEach(s=>lines.push(`**${speakerNames[s.speaker]||s.speaker}** · ${clock(s.start)}  `,s.text,''));return lines.join('\n')}
+document.querySelectorAll('.result-tabs button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.result-tabs button').forEach(x=>x.classList.toggle('active',x===b));$('#summaryTab').hidden=b.dataset.tab!=='summary';$('#transcriptTab').hidden=b.dataset.tab!=='transcript'}));
+el.toggleKey.addEventListener('click',()=>{const show=el.apiKey.type==='password';el.apiKey.type=show?'text':'password';el.toggleKey.textContent=show?'숨김':'보기'});el.saveKey.addEventListener('click',()=>{const value=el.apiKey.value.trim();if(!value.startsWith('sk-'))return toast('sk-로 시작하는 OpenAI API 키를 입력해 주세요.');apiKey=value;localStorage.setItem('malgeul-openai-key',apiKey);el.apiKey.type='password';el.toggleKey.textContent='보기';el.removeKey.hidden=false;status(true,'AI 서비스 준비됨');toast('이 브라우저에만 키를 저장했어요.')});el.removeKey.addEventListener('click',()=>{apiKey='';localStorage.removeItem('malgeul-openai-key');el.apiKey.value='';el.removeKey.hidden=true;status(false,'API 키 입력 필요');toast('브라우저에서 키를 삭제했어요.')});el.record.addEventListener('click',toggle);el.file.addEventListener('change',()=>{const f=el.file.files[0];if(f&&ready())processAudio(f,f.name);el.file.value=''});el.copy.addEventListener('click',async()=>{await navigator.clipboard.writeText(markdown());toast('회의록을 복사했어요.')});el.download.addEventListener('click',()=>{const u=URL.createObjectURL(new Blob([markdown()],{type:'text/markdown;charset=utf-8'})),a=document.createElement('a');a.href=u;a.download=`${(el.title.value.trim()||'회의록').replace(/[\\/:*?"<>|]/g,'-')}.md`;a.click();URL.revokeObjectURL(u)});el.newMeeting.addEventListener('click',()=>{currentData=null;el.result.hidden=true;el.setup.hidden=false;scrollTo({top:0,behavior:'smooth'})});window.addEventListener('beforeunload',()=>{stream?.getTracks().forEach(t=>t.stop())});if('serviceWorker'in navigator&&location.protocol!=='file:')addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));checkService();

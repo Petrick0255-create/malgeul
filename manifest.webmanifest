@@ -1,10 +1,1 @@
-{
-  "name": "말글 — 음성 받아쓰기",
-  "short_name": "말글",
-  "description": "말하면 글이 되는 간편한 음성 받아쓰기 앱",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#f4f1eb",
-  "theme_color": "#f4f1eb",
-  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
-}
+{"name":"말글 — AI 회의록","short_name":"말글","description":"화자를 구분하고 핵심과 할 일을 정리하는 AI 회의록","start_url":"./","display":"standalone","background_color":"#f2efe8","theme_color":"#f2efe8","icons":[{"src":"favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}

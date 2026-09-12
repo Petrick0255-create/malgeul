@@ -1,105 +1,34 @@
 <!doctype html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f4f1eb" />
-    <meta name="description" content="브라우저에서 바로 쓰는 빠르고 편안한 음성 받아쓰기 앱" />
-    <title>말글 — 말하면 글이 됩니다</title>
-    <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <div class="noise" aria-hidden="true"></div>
-    <header class="site-header">
-      <a class="brand" href="#" aria-label="말글 홈">
-        <span class="brand-mark" aria-hidden="true">ㅁ</span>
-        <span>말글</span>
-      </a>
-      <div class="privacy-pill"><span></span> 음성은 기기에 저장되지 않아요</div>
-    </header>
-
-    <main>
-      <section class="hero" aria-labelledby="hero-title">
-        <p class="eyebrow">VOICE TO TEXT, SIMPLY</p>
-        <h1 id="hero-title">말하면,<br /><em>글이 됩니다.</em></h1>
-        <p class="hero-copy">생각의 속도를 놓치지 마세요.<br />말글이 당신의 목소리를 차분한 문장으로 옮겨드려요.</p>
-      </section>
-
-      <section class="workspace" aria-label="음성 받아쓰기">
-        <div class="workspace-toolbar">
-          <div class="language-wrap">
-            <label for="language">인식 언어</label>
-            <select id="language">
-              <option value="ko-KR">한국어</option>
-              <option value="en-US">English (US)</option>
-              <option value="ja-JP">日本語</option>
-              <option value="zh-CN">中文</option>
-            </select>
-          </div>
-          <div class="status" id="status" aria-live="polite">
-            <span class="status-dot"></span>
-            <span>준비됐어요</span>
-          </div>
-        </div>
-
-        <div class="editor-wrap">
-          <textarea id="transcript" spellcheck="true" aria-label="받아쓰기 내용" placeholder="여기에 받아쓴 내용이 나타납니다. 직접 입력하거나 수정할 수도 있어요."></textarea>
-          <div class="interim" id="interim" aria-live="polite"></div>
-        </div>
-
-        <div class="workspace-footer">
-          <div class="stats" aria-label="문서 통계">
-            <span><strong id="charCount">0</strong>자</span>
-            <span><strong id="wordCount">0</strong>단어</span>
-            <span id="timer">00:00</span>
-          </div>
-          <div class="actions">
-            <button class="icon-button" id="clearButton" type="button" title="모두 지우기" aria-label="모두 지우기">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5" /></svg>
-            </button>
-            <button class="icon-button" id="copyButton" type="button" title="복사" aria-label="텍스트 복사">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
-            </button>
-            <button class="icon-button" id="downloadButton" type="button" title="텍스트 파일 저장" aria-label="텍스트 파일 저장">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 19h14" /></svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="record-zone">
-          <button id="recordButton" class="record-button" type="button" aria-label="받아쓰기 시작">
-            <span class="record-rings" aria-hidden="true"></span>
-            <span class="record-core">
-              <svg class="mic-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21m-3 0h6"/></svg>
-              <svg class="stop-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
-            </span>
-          </button>
-          <p id="recordHint">버튼을 눌러 받아쓰기를 시작하세요</p>
-          <p class="shortcut"><kbd>Space</kbd> 시작 · 멈춤</p>
-        </div>
-      </section>
-
-      <section class="tips" aria-label="사용 팁">
-        <div class="tip"><span>01</span><p><strong>천천히, 또렷하게</strong>마이크와 한 뼘 정도 거리를 두면 좋아요.</p></div>
-        <div class="tip"><span>02</span><p><strong>문장부호도 말로</strong>“마침표”, “쉼표”, “물음표”라고 말해보세요.</p></div>
-        <div class="tip"><span>03</span><p><strong>바로 다듬고 저장</strong>받아쓴 글을 수정하고 복사하거나 저장하세요.</p></div>
-      </section>
-    </main>
-
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <div class="modal-backdrop" id="permissionModal" hidden>
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <span class="modal-icon">🎙️</span>
-        <h2 id="modalTitle">마이크 권한이 필요해요</h2>
-        <p>브라우저 주소창 옆의 권한 아이콘에서 마이크를 허용한 뒤 다시 시도해 주세요.</p>
-        <button id="closeModal" type="button">확인</button>
-      </div>
-    </div>
-    <script src="app.js"></script>
-  </body>
-</html>
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f2efe8"><meta name="description" content="화자를 구분하고 결정 사항과 할 일을 정리하는 AI 회의록"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://api.openai.com; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; media-src 'self' blob:">
+  <title>말글 — 회의가 끝나면, 기록도 끝</title>
+  <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="styles.css?v=3">
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+<header class="site-header"><a class="brand" href="#"><span class="brand-mark">ㅁ</span><span>말글</span><small>MEETING NOTES</small></a><div class="secure-pill"><span></span> API 키는 이 기기에만 저장돼요</div></header>
+<main>
+  <section class="hero"><p class="eyebrow">AI MEETING NOTE TAKER</p><h1>회의는 말로,<br><em>기록은 자동으로.</em></h1><div class="hero-aside"><p>누가 무엇을 말했는지 구분하고,<br>결정된 내용과 다음 할 일을 한눈에 정리합니다.</p><div class="mini-speakers"><i>A</i><i>B</i><i>C</i><span>화자 자동 구분</span></div></div></section>
+  <section class="meeting-card" id="setupPanel">
+    <div class="card-head"><div><span class="step-label">NEW MEETING</span><h2>새 회의 기록</h2></div><span class="api-status" id="apiStatus"><i></i><b>서비스 확인 중</b></span></div>
+    <div class="meeting-fields"><label class="field title-field"><span>회의 제목</span><input id="meetingTitle" type="text" value="새로운 회의" maxlength="80"></label><label class="field"><span>날짜</span><input id="meetingDate" type="date"></label><label class="field"><span>언어</span><select id="language"><option value="ko" selected>한국어</option><option value="en">English</option><option value="ja">日本語</option><option value="zh">中文</option></select></label></div>
+    <div class="key-panel"><div class="key-copy"><span class="key-icon">⌁</span><div><strong>OpenAI API 키</strong><p>이 브라우저에만 저장되고 OpenAI API로 직접 전송됩니다. 개인 기기에서만 사용하세요.</p></div></div><div class="key-control"><input id="apiKeyInput" type="password" placeholder="sk-••••••••••••••••" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="OpenAI API 키"><button id="toggleKeyButton" class="key-button" type="button">보기</button><button id="saveKeyButton" class="key-button primary" type="button">저장</button><button id="removeKeyButton" class="key-button danger" type="button" hidden>삭제</button></div></div>
+    <div class="capture-area"><div class="visualizer" id="visualizer"></div><button class="record-button" id="recordButton" type="button" aria-label="회의 녹음 시작"><span class="record-halo"></span><span class="record-core"><svg class="mic-icon" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21m-3 0h6"/></svg><span class="stop-icon"></span></span></button><h3 id="captureTitle">마이크를 켜고 회의를 시작하세요</h3><p id="captureHint">회의가 끝나면 화자별 대화와 핵심 내용을 자동으로 정리해 드려요.</p><div class="record-meta" id="recordMeta" hidden><strong id="timer">00:00</strong><span>녹음 중</span><i></i></div><div class="or"><span>또는</span></div><label class="upload-button" for="audioFile"><svg viewBox="0 0 24 24"><path d="M12 16V4m-4 4 4-4 4 4M5 15v4h14v-4"/></svg>녹음 파일 불러오기</label><input id="audioFile" type="file" accept="audio/*,.mp3,.mp4,.mpeg,.mpga,.m4a,.ogg,.wav,.webm" hidden><p class="file-note">MP3, M4A, WAV, WEBM · 최대 25MB</p></div>
+    <label class="consent"><input id="consentCheck" type="checkbox"><span class="checkmark"></span><span>참석자에게 녹음 및 AI 전사 사실을 알렸습니다.</span></label>
+  </section>
+  <section class="processing-card" id="processingPanel" hidden aria-live="polite"><div class="processing-orbit"><span></span></div><p class="step-label">ANALYZING MEETING</p><h2 id="processingTitle">목소리를 구분하고 있어요</h2><p>회의 길이에 따라 몇 분 정도 걸릴 수 있습니다.</p><div class="progress-track"><span id="progressBar"></span></div><div class="process-steps"><span class="active">음성 업로드</span><span>화자 분리</span><span>회의록 정리</span></div></section>
+  <section class="result" id="resultPanel" hidden>
+    <div class="result-header"><div><p class="eyebrow">MEETING COMPLETE</p><h2 id="resultTitle">회의록</h2><p class="result-meta" id="resultMeta"></p></div><div class="result-actions"><button id="copyButton" class="ghost-button">복사</button><button id="downloadButton" class="dark-button">Markdown 저장</button></div></div>
+    <div class="result-tabs" role="tablist"><button class="active" data-tab="summary">한눈에 보기</button><button data-tab="transcript">전체 대화</button></div>
+    <div class="tab-panel" id="summaryTab"><article class="summary-block"><span>01</span><div><h3>회의 요약</h3><p id="summaryOverview"></p></div></article><article class="summary-block"><span>02</span><div><h3>핵심 논의</h3><ul id="keyPoints"></ul></div></article><article class="summary-block"><span>03</span><div><h3>결정 사항</h3><ul id="decisions"></ul></div></article><article class="summary-block"><span>04</span><div><h3>할 일</h3><div class="action-table" id="actionItems"></div></div></article></div>
+    <div class="tab-panel" id="transcriptTab" hidden><div class="speaker-editor"><div><strong>화자 이름</strong><p>이름을 바꾸면 대화에도 바로 반영됩니다.</p></div><div class="speaker-inputs" id="speakerInputs"></div></div><div class="transcript-list" id="transcriptList"></div></div>
+    <button class="new-meeting" id="newMeetingButton">＋ 새 회의 기록하기</button>
+  </section>
+  <section class="features"><article><span>01</span><h3>화자 자동 구분</h3><p>목소리 특징을 분석해 발언별로 구분합니다.</p></article><article><span>02</span><h3>핵심만 정리</h3><p>논점과 결정 사항을 구조화합니다.</p></article><article><span>03</span><h3>할 일 추출</h3><p>담당자와 기한을 놓치지 않습니다.</p></article></section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div><script src="config.js?v=3"></script><script src="app.js?v=3"></script>
+</body></html>
