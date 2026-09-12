@@ -1,0 +1,10 @@
+{
+  "name": "말글 — 음성 받아쓰기",
+  "short_name": "말글",
+  "description": "말하면 글이 되는 간편한 음성 받아쓰기 앱",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f1eb",
+  "theme_color": "#f4f1eb",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
