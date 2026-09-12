@@ -99,7 +99,7 @@ function connectLiveTranslation(){
   if(!recording)return;clearTimeout(reconnectId);setLiveStatus(reconnectAttempts?'실시간 연결을 복구하고 있어요':'Gemini Live에 연결하고 있어요');
   const socket=new WebSocket(`${LIVE_WS}?key=${encodeURIComponent(apiKey)}`);liveSocket=socket;socket.liveReady=false;
   socket.onopen=()=>{
-    const setup={model:'models/gemini-3.5-live-translate-preview',generationConfig:{responseModalities:['AUDIO'],inputAudioTranscription:{},outputAudioTranscription:{},translationConfig:{targetLanguageCode:LANGUAGES[el.target.value].live,echoTargetLanguage:true}}};
+    const setup={model:'models/gemini-3.5-live-translate-preview',generationConfig:{responseModalities:['AUDIO'],translationConfig:{targetLanguageCode:LANGUAGES[el.target.value].live,echoTargetLanguage:true}},inputAudioTranscription:{},outputAudioTranscription:{}};
     socket.send(JSON.stringify({setup}));
   };
   socket.onmessage=event=>handleLiveMessage(socket,event.data);
