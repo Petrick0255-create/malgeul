@@ -2,17 +2,17 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#f2efe8"><meta name="description" content="1분마다 화자를 구분해 원문과 번역을 기록하는 실시간 AI 회의록"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://generativelanguage.googleapis.com https://*.googleapis.com; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; media-src 'self' blob:">
+  <meta name="theme-color" content="#f2efe8"><meta name="description" content="말하는 즉시 원문과 번역을 기록하고 화자를 구분하는 실시간 AI 회의록"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://generativelanguage.googleapis.com https://*.googleapis.com wss://generativelanguage.googleapis.com; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; media-src 'self' blob:">
   <title>말글 — 실시간 번역 회의록</title>
   <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="styles.css?v=5">
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
 <div class="grain" aria-hidden="true"></div>
 <header class="site-header"><a class="brand" href="#"><span class="brand-mark">ㅁ</span><span>말글</span><small>LIVE MEETING NOTES</small></a><div class="secure-pill"><span></span> API 키는 이 기기에만 저장돼요</div></header>
 <main>
-  <section class="hero"><p class="eyebrow">BILINGUAL LIVE MEETING</p><h1>회의는 그대로,<br><em>번역은 실시간으로.</em></h1><div class="hero-aside"><p>1분마다 누가 무엇을 말했는지 구분하고,<br>원문과 번역을 나란히 기록합니다.</p><div class="mini-speakers"><i>A</i><i>B</i><i>C</i><span>화자별 원문 + 번역</span></div></div></section>
+  <section class="hero"><p class="eyebrow">BILINGUAL LIVE MEETING</p><h1>회의는 그대로,<br><em>번역은 실시간으로.</em></h1><div class="hero-aside"><p>말하는 즉시 원문과 번역을 나란히 보여주고,<br>끝나면 전체 음성에서 화자를 정밀 구분합니다.</p><div class="mini-speakers"><i>A</i><i>B</i><i>C</i><span>화자별 원문 + 번역</span></div></div></section>
 
   <section class="meeting-card" id="setupPanel">
     <div class="card-head"><div><span class="step-label">NEW LIVE MEETING</span><h2>새 회의 설정</h2></div><span class="api-status" id="apiStatus"><i></i><b>서비스 확인 중</b></span></div>
@@ -24,17 +24,18 @@
       <label class="field"><span>화자 수</span><select id="speakerCount"><option value="1">1명</option><option value="2" selected>2명</option><option value="3">3명</option><option value="4">4명</option><option value="5">5명</option><option value="6">6명</option><option value="7">7명</option><option value="8">8명</option></select></label>
     </div>
     <div class="key-panel"><div class="key-copy"><span class="key-icon">⌁</span><div><strong>Gemini API 키</strong><p>이 브라우저에만 저장되고 Google Gemini API로 직접 전송됩니다.</p></div></div><div class="key-control"><input id="apiKeyInput" type="password" placeholder="Gemini API 키 입력" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Gemini API 키"><button id="toggleKeyButton" class="key-button" type="button">보기</button><button id="saveKeyButton" class="key-button primary" type="button">저장</button><button id="removeKeyButton" class="key-button danger" type="button" hidden>삭제</button></div></div>
-    <div class="capture-area"><div class="visualizer" id="visualizer"></div><button class="record-button" id="recordButton" type="button" aria-label="실시간 회의 녹음 시작"><span class="record-halo"></span><span class="record-core"><svg class="mic-icon" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21m-3 0h6"/></svg><span class="stop-icon"></span></span></button><h3 id="captureTitle">마이크를 켜고 회의를 시작하세요</h3><p id="captureHint">1분마다 원문과 화자별 번역이 실시간으로 추가됩니다.</p><div class="record-meta" id="recordMeta" hidden><strong id="timer">00:00</strong><span>실시간 녹음 중</span><i></i></div><div class="or"><span>또는 기존 녹음으로 회의록 만들기</span></div><label class="upload-button" for="audioFile"><svg viewBox="0 0 24 24"><path d="M12 16V4m-4 4 4-4 4 4M5 15v4h14v-4"/></svg>녹음 파일 불러오기</label><input id="audioFile" type="file" accept="audio/*,.mp3,.mpeg,.m4a,.aac,.aiff,.flac,.ogg,.wav,.webm" hidden><p class="file-note">MP3, M4A, WAV, WEBM · 최대 30분·25MB</p></div>
+    <div class="capture-area"><div class="visualizer" id="visualizer"></div><button class="record-button" id="recordButton" type="button" aria-label="실시간 회의 녹음 시작"><span class="record-halo"></span><span class="record-core"><svg class="mic-icon" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21m-3 0h6"/></svg><span class="stop-icon"></span></span></button><h3 id="captureTitle">마이크를 켜고 회의를 시작하세요</h3><p id="captureHint">말하는 즉시 원문과 번역이 이어서 표시됩니다.</p><div class="record-meta" id="recordMeta" hidden><strong id="timer">00:00</strong><span>실시간 녹음 중</span><i></i></div><div class="or"><span>또는 기존 녹음으로 회의록 만들기</span></div><label class="upload-button" for="audioFile"><svg viewBox="0 0 24 24"><path d="M12 16V4m-4 4 4-4 4 4M5 15v4h14v-4"/></svg>녹음 파일 불러오기</label><input id="audioFile" type="file" accept="audio/*,.mp3,.mpeg,.m4a,.aac,.aiff,.flac,.ogg,.wav,.webm" hidden><p class="file-note">MP3, M4A, WAV, WEBM · 최대 30분·25MB</p></div>
     <label class="consent"><input id="consentCheck" type="checkbox"><span class="checkmark"></span><span>참석자에게 녹음·AI 전사·번역 사실을 알렸습니다.</span></label>
   </section>
 
   <section class="live-panel" id="livePanel" hidden aria-live="polite">
-    <div class="live-head"><div><span class="live-badge"><i></i> LIVE</span><h2>실시간 원문과 번역</h2><p id="liveStatus">듣는 중 · 다음 1분 구간을 기다리고 있어요</p></div><div class="live-clock"><strong id="liveTimer">00:00</strong><span>다음 업데이트 <b id="nextUpdate">01:00</b></span></div></div>
+    <div class="live-head"><div><span class="live-badge"><i></i> LIVE</span><h2>실시간 원문과 번역</h2><p id="liveStatus">Gemini Live에 연결하고 있어요</p></div><div class="live-clock"><strong id="liveTimer">00:00</strong><span class="connection-state" id="liveConnection" data-state="connecting">연결 중</span></div></div>
+    <div class="active-speaker-bar"><div><strong>현재 말하는 화자</strong><p>화자가 바뀔 때 눌러 주세요. 끝난 뒤 자동 화자 분리로 다시 정리합니다.</p></div><div class="active-speaker-buttons" id="activeSpeakerButtons"></div></div>
     <div class="speaker-editor live-speaker-editor"><div><strong>화자 이름</strong><p>녹음 중에도 이름을 바꿀 수 있고, 각 발언의 화자도 수정할 수 있어요.</p></div><div class="speaker-inputs" id="liveSpeakerInputs"></div></div>
     <div class="live-columns"><section><header><span>ORIGINAL</span><strong id="liveSourceLabel">한국어</strong></header><div class="live-stream" id="liveOriginal"></div></section><section class="translation-column"><header><span>TRANSLATION</span><strong id="liveTargetLabel">English</strong></header><div class="live-stream" id="liveTranslated"></div></section></div>
   </section>
 
-  <section class="processing-card" id="processingPanel" hidden aria-live="polite"><div class="processing-orbit"><span></span></div><p class="step-label">FINALIZING MEETING</p><h2 id="processingTitle">남은 음성을 번역하고 있어요</h2><p>원문과 번역이 함께 있는 회의록을 완성합니다.</p><div class="progress-track"><span id="progressBar"></span></div><div class="process-steps"><span class="active">남은 구간 처리</span><span class="active">회의록 정리</span><span>완료</span></div></section>
+  <section class="processing-card" id="processingPanel" hidden aria-live="polite"><div class="processing-orbit"><span></span></div><p class="step-label">FINALIZING MEETING</p><h2 id="processingTitle">전체 음성에서 화자를 구분하고 있어요</h2><p>전체 녹음을 한 번 정밀 분석해 원문과 번역 회의록을 완성합니다.</p><div class="progress-track"><span id="progressBar"></span></div><div class="process-steps"><span class="active">정밀 화자 분리</span><span class="active">회의록 정리</span><span>완료</span></div></section>
 
   <section class="result" id="resultPanel" hidden>
     <div class="result-header"><div><p class="eyebrow">BILINGUAL MEETING COMPLETE</p><h2 id="resultTitle">회의록</h2><p class="result-meta" id="resultMeta"></p></div><div class="result-actions"><select id="downloadMode" aria-label="내보낼 회의록 언어"><option value="both" selected>원문 + 번역</option><option value="original">원문만</option><option value="translated">번역만</option></select><button id="copyButton" class="ghost-button">복사</button><button id="downloadButton" class="dark-button">Markdown 저장</button></div></div>
@@ -44,8 +45,8 @@
     <button class="new-meeting" id="newMeetingButton">＋ 새 회의 기록하기</button>
   </section>
 
-  <section class="features"><article><span>01</span><h3>1분마다 업데이트</h3><p>회의를 끊지 않고 구간별로 전사와 번역을 추가합니다.</p></article><article><span>02</span><h3>화자 즉시 수정</h3><p>이름과 잘못 분류된 발언을 녹음 중에도 고칩니다.</p></article><article><span>03</span><h3>세 가지 내보내기</h3><p>원문만, 번역만, 또는 두 언어를 함께 저장합니다.</p></article></section>
+  <section class="features"><article><span>01</span><h3>몇 초 안에 업데이트</h3><p>하나의 스트리밍 연결로 원문과 번역을 바로 이어 씁니다.</p></article><article><span>02</span><h3>화자 즉시 수정</h3><p>현재 화자, 이름, 잘못 분류된 발언을 녹음 중에도 고칩니다.</p></article><article><span>03</span><h3>세 가지 내보내기</h3><p>원문만, 번역만, 또는 두 언어를 함께 저장합니다.</p></article></section>
 </main>
-<div class="toast" id="toast" role="status" aria-live="polite"></div><script src="config.js?v=5"></script><script src="app.js?v=5"></script>
+<div class="toast" id="toast" role="status" aria-live="polite"></div><script src="config.js?v=6"></script><script src="app.js?v=6"></script>
 </body>
 </html>
