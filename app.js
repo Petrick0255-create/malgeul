@@ -16,7 +16,7 @@ const LANGUAGES={ko:{name:'한국어',code:'ko-KR',live:'ko'},en:{name:'English'
 let apiKey=localStorage.getItem('malgeul-gemini-key')||'';
 let recorder,stream,audioContext,audioSource,audioProcessor,silentGain,liveSocket,timerId,progressId,reconnectId,draftTimer;
 let recording=false,finishing=false,finalizeStarted=false,stopRequested=false,elapsed=0,speakerSlots=2,activeSpeakerId='1',currentData;
-let recordedChunks=[],pcmQueue=[],liveRows=[],meetingRows=[],speakerNames={},speakerIdMap=new Map(),liveDraft=null,sessionHandle='',reconnectAttempts=0;
+let recordedChunks=[],pcmQueue=[],liveRows=[],meetingRows=[],speakerNames={},speakerIdMap=new Map(),liveDraft=null,reconnectAttempts=0;
 el.date.value=new Intl.DateTimeFormat('en-CA',{timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 
 function toast(message){el.toast.textContent=message;el.toast.classList.add('show');setTimeout(()=>el.toast.classList.remove('show'),2800)}
@@ -44,11 +44,11 @@ function setRecordingUI(active){
   el.visualizer.innerHTML=active?Array.from({length:28},(_,i)=>`<i style="animation-delay:${i%7*-.09}s"></i>`).join(''):'';
 }
 function setLiveStatus(message,state='connecting'){
-  el.liveStatus.textContent=message;el.liveConnection.textContent=state==='connected'?'실시간 연결':state==='error'?'재연결 중':'연결 중';el.liveConnection.dataset.state=state;
+  el.liveStatus.textContent=message;el.liveConnection.textContent=state==='connected'?'실시간 연결':state==='failed'?'연결 실패':state==='error'?'재연결 중':'연결 중';el.liveConnection.dataset.state=state;
 }
 
 function prepareMeeting(){
-  speakerSlots=Number(el.speakerCount.value)||2;activeSpeakerId='1';meetingRows=[];liveRows=[];speakerNames={};speakerIdMap=new Map();liveDraft=null;currentData=null;sessionHandle='';pcmQueue=[];
+  speakerSlots=Number(el.speakerCount.value)||2;activeSpeakerId='1';meetingRows=[];liveRows=[];speakerNames={};speakerIdMap=new Map();liveDraft=null;currentData=null;pcmQueue=[];
   for(let i=1;i<=speakerSlots;i++)speakerNames[String(i)]=`화자 ${i}`;
   renderSpeakerEditors();renderActiveSpeakers();renderLiveRows();
   el.live.hidden=false;el.result.hidden=true;el.processing.hidden=true;
@@ -99,22 +99,27 @@ function connectLiveTranslation(){
   if(!recording)return;clearTimeout(reconnectId);setLiveStatus(reconnectAttempts?'실시간 연결을 복구하고 있어요':'Gemini Live에 연결하고 있어요');
   const socket=new WebSocket(`${LIVE_WS}?key=${encodeURIComponent(apiKey)}`);liveSocket=socket;socket.liveReady=false;
   socket.onopen=()=>{
-    const setup={model:'models/gemini-3.5-live-translate-preview',generationConfig:{responseModalities:['AUDIO'],inputAudioTranscription:{},outputAudioTranscription:{},translationConfig:{targetLanguageCode:LANGUAGES[el.target.value].live,echoTargetLanguage:true}},contextWindowCompression:{slidingWindow:{}},sessionResumption:{}};
-    if(sessionHandle)setup.sessionResumption.handle=sessionHandle;socket.send(JSON.stringify({setup}));
+    const setup={model:'models/gemini-3.5-live-translate-preview',generationConfig:{responseModalities:['AUDIO'],inputAudioTranscription:{},outputAudioTranscription:{},translationConfig:{targetLanguageCode:LANGUAGES[el.target.value].live,echoTargetLanguage:true}}};
+    socket.send(JSON.stringify({setup}));
   };
   socket.onmessage=event=>handleLiveMessage(socket,event.data);
-  socket.onerror=()=>setLiveStatus('연결이 잠시 끊겼어요. 자동으로 복구합니다.','error');
-  socket.onclose=()=>{if(socket!==liveSocket||!recording||stopRequested)return;setLiveStatus('실시간 연결을 다시 여는 중이에요','error');reconnectAttempts++;reconnectId=setTimeout(connectLiveTranslation,Math.min(5000,750*reconnectAttempts))};
+  socket.onerror=()=>setLiveStatus('Live API 연결을 확인하고 있어요','error');
+  socket.onclose=event=>{
+    if(socket!==liveSocket||!recording||stopRequested)return;if(socket.refreshing){reconnectId=setTimeout(connectLiveTranslation,350);return}
+    const permanent=[1002,1003,1007,1008].includes(event.code),reason=String(event.reason||'').replace(/[\r\n]+/g,' ').slice(0,90);
+    if(permanent||reconnectAttempts>=4){pcmQueue=[];setLiveStatus(`Live API 연결 실패 (${event.code||'알 수 없음'})${reason?` · ${reason}`:''}. 녹음은 계속 저장돼요.`,'failed');return}
+    reconnectAttempts++;setLiveStatus(`Live API 재연결 ${reconnectAttempts}/4${reason?` · ${reason}`:''}`,'error');reconnectId=setTimeout(connectLiveTranslation,Math.min(5000,900*reconnectAttempts));
+  };
 }
 function handleLiveMessage(socket,payload){
   let response;try{response=JSON.parse(payload)}catch{return}
   if(response.setupComplete){socket.liveReady=true;reconnectAttempts=0;setLiveStatus('말하는 즉시 원문과 번역을 표시해요','connected');flushPcm()}
-  const update=response.sessionResumptionUpdate;if(update?.resumable&&update.newHandle)sessionHandle=update.newHandle;
+  if(response.error){setLiveStatus(`Live API 오류 · ${String(response.error.message||'연결 설정을 확인해 주세요.').slice(0,110)}`,'failed');stopRequested=true;socket.close(1000,'api error');return}
   const content=response.serverContent;
   if(content?.inputTranscription?.text)appendLiveText('original',content.inputTranscription.text);
   if(content?.outputTranscription?.text)appendLiveText('translated',content.outputTranscription.text);
   if(content?.turnComplete||content?.generationComplete)scheduleDraftCommit(200);
-  if(response.goAway&&recording){setLiveStatus('세션을 안전하게 이어 붙이는 중이에요','error');setTimeout(()=>{if(socket===liveSocket&&socket.readyState<2)socket.close(1000,'resume')},300)}
+  if(response.goAway&&recording){setLiveStatus('Live API 세션을 새로 연결하고 있어요','error');setTimeout(()=>{if(socket===liveSocket&&socket.readyState<2){socket.refreshing=true;reconnectAttempts=0;socket.close(1000,'refresh')}},300)}
 }
 function appendLiveText(kind,text){
   const clean=String(text||'');if(!clean)return;
