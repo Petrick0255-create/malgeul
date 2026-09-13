@@ -1,1 +1,1 @@
-{"name":"말글 — 실시간 번역 회의록","short_name":"말글","description":"선택한 주기마다 원문과 번역을 보여주고 화자를 구분하는 AI 회의록","start_url":"./","display":"standalone","background_color":"#f2efe8","theme_color":"#f2efe8","icons":[{"src":"favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
+{"name":"말글 — AI 회의록","short_name":"말글","description":"번역 회의와 한 언어 회의 기록을 선택할 수 있는 화자 분리 AI 회의록","start_url":"./","display":"standalone","background_color":"#f2efe8","theme_color":"#f2efe8","icons":[{"src":"favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
